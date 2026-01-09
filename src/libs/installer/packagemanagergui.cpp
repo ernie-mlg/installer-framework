@@ -1,4 +1,4 @@
-/**************************************************************************
+﻿/**************************************************************************
 **
 ** Copyright (C) 2025 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
@@ -662,7 +662,31 @@ void PackageManagerGui::clickButton(int wb, int delay)
         wb = QWizard::CancelButton;
 
     if (QAbstractButton *b = button(static_cast<QWizard::WizardButton>(wb)))
-        QTimer::singleShot(delay, b, &QAbstractButton::click);
+        QTimer::singleShot
+        (
+            delay,
+            [this, b, wb]()
+            {
+                b->click();
+
+                // 完了ページのFinishButton、かつ、非表示なら、
+                //  silentなら明示的にインストーラを終了する
+                //
+                //  FinishButtonはacccepted()に接続されているので、
+                //      https://web.mit.edu/~firebird/arch/sun4x_59/doc/html/qwizard.html#finishButton
+                //  FinishButtonで最後のウィンドウが閉じ、
+                //  QApplication::quitOnLastWindowClosed()の効果でインストーラが終了する筈だが、
+                //  silentの時はそもそもウィンドウが開いていなため終了しないと思われる。
+                qDebug() << "[Test] PackageManagerCore::clickButton():" << wb << QWizard::FinishButton
+                         << "," << currentId() << PackageManagerCore::InstallationFinished
+                         << "," << isVisible();
+                if ((currentId() == PackageManagerCore::InstallationFinished) && (wb == QWizard::FinishButton) && !isVisible())
+                {
+                    qDebug() << "[Test] PackageManagerCore::clickButton(x3)";
+                    QCoreApplication::instance()->quit();
+                }
+            }
+        );
     else
         qCWarning(QInstaller::lcDeveloperBuild) << "Button with type: " << d->buttonType(wb) << "not found!";
 }
